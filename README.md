@@ -34,7 +34,8 @@ pip install -r requirements.txt
 python3 sigen_make_env.py   --user "your@email.com"   --password "your-plaintext-password"   --env-path amber2sigen.env   --overwrite
 ```
 
-This creates `amber2sigen.env` with `SIGEN_PASS_ENC`. Add your **Amber API token** manually.
+This creates `amber2sigen.env` with `SIGEN_PASS_ENC`. 
+Add your **Amber API token** manually.
 
 ---
 
