@@ -34,8 +34,7 @@ pip install -r requirements.txt
 python3 sigen_make_env.py   --user "your@email.com"   --password "your-plaintext-password"   --env-path amber2sigen.env   --overwrite
 ```
 
-This creates `amber2sigen.env` with `SIGEN_PASS_ENC`. 
-Add your **Amber API token** manually.
+This creates `amber2sigen.env` with `SIGEN_PASS_ENC`. Add your **Amber API token** manually.
 
 ---
 
@@ -54,7 +53,7 @@ ALIGN=end
 PLAN_NAME=Amber Live
 ADVANCED=predicted
 USE_CURRENT=1
-STATION_ID=92025081200321
+STATION_ID=<Ask SigenAI for your Station ID>
 ```
 
 ---
@@ -117,15 +116,31 @@ sudo systemctl enable --now amber2sigen.timer
   journalctl -u amber2sigen.service -f
   ```
 - Verify timer:
-- 
   ```bash
   systemctl list-timers | grep amber2sigen
   ```
 
 ---
 
-## CLI Flags
+## How to find your Sigen Station ID
 
+The `STATION_ID` is a unique numeric ID assigned to your Sigen Energy Controller by Sigen Cloud.  
+It must be included in the payload or Sigen won’t know which unit to update.
+
+Easiest way to find it:
+1. Ask SigenAI to "Tell me my StationID"
+
+Complex Ways to find it:
+1. **HAR capture**: In your browser, open the Sigen web portal, perform a tariff save, then export the HAR.  
+   Look for `"stationId": 92025081200321` in the JSON payload.  
+2. **App/device info**: Sometimes shown in the app under device details.  
+3. Once known, add it to your `.env` file as `STATION_ID=...`.
+
+This value is specific to your unit — not random or generated locally.
+
+---
+
+## CLI Flags
 - `--station-id` (required)
 - `--interval 5|30`
 - `--advanced-price low|predicted|high`
