@@ -139,7 +139,7 @@ Easiest way to find it:
 
 Complex Ways to find it:
 1. **HAR capture**: In your browser, open the Sigen web portal, perform a tariff save, then export the HAR.  
-   Look for `"stationId": 92025081200321` in the JSON payload.  
+   Look for `"stationId": <your station ID>` in the JSON payload.  
 2. **App/device info**: Sometimes shown in the app under device details.  
 3. Once known, add it to your `.env` file as `STATION_ID=...`.
 

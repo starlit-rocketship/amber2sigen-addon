@@ -17,7 +17,7 @@ Version: v23
 
 Examples:
   python3 amber_to_sigen23.py \
-    --station-id 92025081200321 \
+    --station-id 92025781200321 \
     --tz Australia/Adelaide \
     --interval 30 \
     --align end \
