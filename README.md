@@ -154,7 +154,7 @@ Group=amber2sigen
 `/etc/systemd/system/amber2sigen.timer`
 ```ini
 [Unit]
-Description=Run amber2sigen periodically at absolute 4-min marks +45s
+Description=Run amber2sigen periodically at absolute 5-min marks +20s
 Wants=amber2sigen.service
 
 [Timer]
