@@ -118,6 +118,7 @@ PLAN_NAME=Amber Live
 ADVANCED=predicted
 USE_CURRENT=1
 STATION_ID=<Ask SigenAI for your Station ID>
+PAYLOAD_DEBUG=1
 ```
 
 ---
