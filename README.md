@@ -197,9 +197,51 @@ sudo systemctl enable --now amber2sigen.timer
 
 ---
 
-## CLI Flags
-- `--station-id` (required)
-- `--interval 5|30`
-- `--advanced-price low|predicted|high`
-- `--use-current`
-- `--dry-run`
+# CLI Flags
+## CLI Flags for `amber_to_sigen.py`
+
+| Flag | Type / Values | Default | Purpose |
+|------|---------------|---------|---------|
+| `--amber-token` | String | from env `AMBER_TOKEN` | Amber API token used to authenticate and fetch prices. |
+| `--site-id` | String | auto-detected | Amber site ID. If omitted, first active site is used. |
+| `--tz` | Timezone string | `Australia/Adelaide` | Time zone for converting and labeling price slots. |
+| `--interval` | `5` or `30` | from env `INTERVAL` (default `30`) | Slot size in minutes; determines whether 5-minute or 30-minute Amber prices are used. |
+| `--align` | `start` / `end` | `end` | Whether to align Amber rows to slot **start** or **end**. Amber app convention is `end`. |
+| `--slot-shift` | Integer | `0` | Rotate/shift the entire BUY/SELL series by N slots. Positive = later, negative = earlier. |
+| `--advanced-price` | `low` / `predicted` / `high` | none | Use Amber’s `advancedPrice.<field>` for BUY price instead of `perKwh`. |
+| `--use-current` | Flag (on/off) | true (unless `USE_CURRENT=0`) | Enable fetching `/prices/current` to override the current slot with the latest interval. |
+| `--no-use-current` | Flag (on/off) | — | Explicitly disable `/prices/current` override. |
+| `--station-id` | Integer | **Required** | The numeric `stationId` for your Sigen Energy Controller. |
+| `--plan-name` | String | `"SAPN TOU"` | Label to use for the tariff plan in the payload sent to Sigen. |
+| `--sigen-url` | URL | `SIGEN_SAVE_URL` or default Sigen API URL | Endpoint to POST prices into Sigen Cloud. |
+| `--sigen-user` | String | from env `SIGEN_USER` | Sigen account username (email). Used for authentication. |
+| `--device-id` | String | from env `SIGEN_DEVICE_ID` or `"1756353655250"` | Sigen `userDeviceId`. Required for password-grant authentication. |
+| `--dry-run` | Flag | off | Print JSON payload instead of POSTing to Sigen. Useful for testing. |
+| `--allow-zero-buy` | Flag | off | Allow posting to Sigen even if final BUY prices include `0.0`. By default, posting is skipped if zeros are detected. |
+
+### Notes
+- Environment variables (`AMBER_TOKEN`, `INTERVAL`, `SIGEN_*`, etc.) can be set in `/etc/amber2sigen.env` instead of CLI flags.  
+- By default, if BUY prices contain `0.0` the script **will not POST** unless `--allow-zero-buy` is specified.  
+- `/prices/current` override improves accuracy by seeding with the **current active slot**. Disable with `--no-use-current`.
+
+---
+
+## CLI Flags for `sigen_make_env.py`
+
+| Flag | Type / Values | Default | Purpose |
+|------|---------------|---------|---------|
+| `--user` | String | **Required** | Sigen account email/username. |
+| `--password` | String | **Required** | (Old behavior) Plaintext Sigen password to be AES-encoded. ⚠️ In the new version, you should instead supply the encoded password via prompt. |
+| `--device-id` | String (13-digit) | Randomly generated if omitted | Sigen `userDeviceId`. If not supplied, a random 13-digit ID is generated. |
+| `--env-path` | Path | `amber2sigen.env` | Output path for the generated environment file. |
+| `--overwrite` | Flag | off | Allow overwriting an existing env file. |
+| `--interval` | `5` or `30` | `30` | Default Amber interval in minutes. |
+| `--tz` | Timezone string | `Australia/Adelaide` | Default time zone override. |
+| `--align` | `start` / `end` | `end` | Default slot alignment label. |
+| `--plan-name` | String | `Amber Live` | Default plan name label. |
+| `--advanced` | `low` / `predicted` / `high` | `predicted` | Default advanced price field to use for BUY. |
+| `--use-current` | `0` or `1` | `1` | Whether to use Amber’s `/prices/current` endpoint for active slot seeding. |
+
+### Notes
+- The script writes a clean `.env` file with the variables needed by `amber_to_sigen.py` and `run.sh`.  
+- In the newer workflow, `--password` encoding may be bypassed and replaced with manual entry of `SIGEN_PASS_ENC` from browser dev tools.  
