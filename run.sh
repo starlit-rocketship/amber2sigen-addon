@@ -5,7 +5,7 @@ cd "$(dirname "$0")"
 if [[ ! -f ./amber2sigen.env ]]; then
   echo "[run.sh] Missing ./amber2sigen.env"; exit 1
 fi
-source ./amber2sigen.env
+source /etc/amber2sigen.env
 
 : "${AMBER_TOKEN:?}"
 : "${STATION_ID:?}"
