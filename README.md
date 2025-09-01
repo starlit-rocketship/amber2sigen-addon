@@ -57,9 +57,9 @@ python3 sigen_make_env.py
 
 You will be prompted for:
 - **Amber API token** (`AMBER_TOKEN`)
-- **Sigen username** (`SIGEN_USER`)
-- **Sigen encoded password** (`SIGEN_PASS_ENC`)
-- **Sigen device ID** (`SIGEN_DEVICE_ID`)
+- **Sigen username** (`SIGEN_USER`) (See Below)
+- **Sigen encoded password** (`SIGEN_PASS_ENC`) (See below)
+- **Sigen device ID** (`SIGEN_DEVICE_ID`) (See below)
 
 Then move the generated env file to `/etc`:
 
@@ -83,8 +83,6 @@ sudo chmod 600 /etc/amber2sigen.env
    - `userDeviceId` → this is the **device ID** (copy into `SIGEN_DEVICE_ID`).  
 
 Copy these values exactly into the prompts.
-
----
 
 ## How to find your Sigen Station ID
 
