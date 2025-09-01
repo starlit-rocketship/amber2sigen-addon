@@ -244,4 +244,4 @@ sudo systemctl enable --now amber2sigen.timer
 
 ### Notes
 - The script writes a clean `.env` file with the variables needed by `amber_to_sigen.py` and `run.sh`.  
-- In the newer workflow, `--password` encoding may be bypassed and replaced with manual entry of `SIGEN_PASS_ENC` from browser dev tools.  
+- In the newer workflow, `--password` encoding must be bypassed (not used) and replaced with manual entry of `SIGEN_PASS_ENC` from browser dev tools.  
