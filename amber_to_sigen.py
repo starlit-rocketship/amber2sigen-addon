@@ -3,20 +3,24 @@
 """
 Amber (5-minute or 30-minute) -> Sigen staticPricing (now -> +24h)
 
-Version: v23
-- /prices/current now requests previous=0, next=1 to prefer the “CurrentInterval”
-  and the immediate next forecast row.
-- Active-slot seeding preference is Current > Forecast > Actual (5-min first,
-  falling back to 30-min if the 5-min endpoint returns nothing).
-- BUY always uses --advanced-price (low|predicted|high) if present, otherwise perKwh.
-  When reading /prices/current, BUY will fall back to perKwh if advancedPrice is missing.
+Version: v24
+- Midnight label normalization in final series & target labels (…-24:00).
+- Hardened _lookup_price_by_label() to normalize both sides and tolerate spacing/00:00 vs 24:00.
+- Index fallback when label not found so overrides never silently miss.
+- “Successful override” log lines with provenance, e.g.:
+  [amber2sigen] Overrode 23:30-24:00 BUY: 53.02 → 59.18 (from 5-min CurrentInterval)
+
+Notes retained from v23:
+- /prices/current requests 5-min first (previous=1,next=1) then falls back to 30-min.
+- Active-slot seeding preference is Current > Forecast > Actual.
+- BUY uses --advanced-price (low|predicted|high) if present, else perKwh (falls back as needed).
 - SELL uses spotPerKwh.
-- Time alignment (“end” by default) and full rotate/canonicalize before override remain unchanged.
-- Keeps zero-diagnostics & safety (skip POST if BUY has 0.0 unless --allow-zero-buy).
-- Sigen OAuth with encrypted-password flow + token cache.
+- Alignment and rotate/canonicalize behavior otherwise unchanged.
+- Safety: skip POST if BUY has 0.0 unless --allow-zero-buy.
+- Sigen OAuth via encrypted password + token cache.
 
 Examples:
-  python3 amber_to_sigen23.py \
+  python3 amber_to_sigen24.py \
     --station-id 92025781200321 \
     --tz Australia/Adelaide \
     --interval 30 \
@@ -44,6 +48,51 @@ SIGEN_SAVE_URL_DEFAULT = "https://api-aus.sigencloud.com/device/stationelecsetpr
 # ---- Zero diagnostics buckets (BUY only) ----
 ZERO_EVENTS_BUY: List[str] = []  # e.g., "forecast 22:30-23:00", "current 23:00-23:30", "postbuild 01:00-01:30"
 
+# ---------------- Helper label normalizers (v24) ----------------
+
+def _hhmm(dtobj: dt.datetime) -> str:
+    return dtobj.strftime("%H:%M")
+
+def _norm_label(s: str) -> str:
+    """
+    Normalize 'HH:MM-HH:MM' labels:
+      - strip spaces
+      - map '-00:00' (end) to '-24:00'
+      - zero-pad defensively
+    """
+    s = (s or "").strip().replace(" ", "")
+    if s.endswith("-00:00"):
+        s = s[:-5] + "-24:00"
+    try:
+        a, b = s.split("-", 1)
+        ah, am = a.split(":"); bh, bm = b.split(":")
+        s = f"{int(ah):02d}:{int(am):02d}-{int(bh):02d}:{int(bm):02d}"
+    except Exception:
+        pass
+    return s
+
+def _label_from_range(start_local: dt.datetime, end_local: dt.datetime) -> str:
+    """
+    Build human label 'HH:MM-HH:MM' with midnight normalized to '24:00' when end rolls to next day 00:00.
+    """
+    start_s = _hhmm(start_local)
+    end_s = _hhmm(end_local)
+    if end_s == "00:00" and end_local.date() != start_local.date():
+        end_s = "24:00"
+    return f"{start_s}-{end_s}"
+
+def _half_hour_index_from_label(label: str) -> Optional[int]:
+    """Return 0..47 index based on the *start* HH:MM of the label."""
+    try:
+        start = _norm_label(label).split("-", 1)[0]
+        hh, mm = [int(x) for x in start.split(":")]
+        if hh == 24 and mm == 0:
+            # clamp defensive: 24:00 start should not exist; treat as previous bin start
+            hh, mm = 23, 30
+        return (hh * 60 + mm) // 30
+    except Exception:
+        return None
+
 # ---------------- Amber helpers ----------------
 
 def get_site_id(token: str) -> str:
@@ -70,7 +119,7 @@ def fetch_amber_prices(token: str, site_id: str, start_date: str, end_date: str,
 def fetch_amber_current_triplet_prefer5(token: str, site_id: str) -> Optional[List[dict]]:
     """
     Fetch current & immediate-next rows from /prices/current.
-    ALWAYS try 5-minute first (best fidelity: previous=0,next=1), then fall back to 30-minute.
+    ALWAYS try 5-minute first (best fidelity: previous=1,next=1), then fall back to 30-minute.
     Returns a list (1–2 rows) or None.
     """
     url = f"{AMBER_BASE}/sites/{site_id}/prices/current"
@@ -202,6 +251,7 @@ def build_series_for_window(
             last = val
         t0_local = t0_utc.astimezone(tz)
         t1_local = t1_utc.astimezone(tz)
+        # label here is interim; canonicalize later to day (adds 24:00 on last bin)
         out.append((f"{t0_local.strftime('%H:%M')}-{t1_local.strftime('%H:%M')}", round(last, 2)))
     return out
 
@@ -233,20 +283,21 @@ def shift_series(series: List[Tuple[str, float]], slots: int) -> List[Tuple[str,
     return list(dq)
 
 def _lookup_price_by_label(series: List[Tuple[str, float]], label: str) -> Optional[float]:
-    """Find price by human label; robust to '-00:00' vs '-24:00' and stray spaces."""
-    def _norm(s: str) -> str:
-        s = s.strip()
-        if s.endswith("-00:00"):
-            s = s[:-5] + "-24:00"
-        return s
-    want = _norm(label)
+    """Find price by human label; robust to '-00:00' vs '-24:00', stray spaces, zero-padding.
+    Also tries a start-time prefix match if exact label not present. (v24-hardened)"""
+    want = _norm_label(label)
+    # 1) exact normalized match
     for tr, p in series:
-        if _norm(tr) == want:
+        if _norm_label(tr) == want:
             return p
-    want_start = want.split("-", 1)[0]
-    for tr, p in series:
-        if tr.split("-", 1)[0] == want_start:
-            return p
+    # 2) start-time prefix fallback
+    try:
+        want_start = want.split("-", 1)[0]
+        for tr, p in series:
+            if _norm_label(tr).split("-", 1)[0] == want_start:
+                return p
+    except Exception:
+        pass
     return None
 
 # ---------------- Sigen OAuth helpers (supports SIGEN_PASS_ENC) ----------------
@@ -400,10 +451,10 @@ def main():
     # Build slots for the next 24h window from 'now'
     slots = build_window(now_local, step_min=step_min, total_minutes=1440)
 
-    # Human label for the "active" slot from now_local
+    # Human label for the "active" slot from now_local (normalize midnight end to 24:00)
     active_start_local = floor_to_step(now_local, step_min)
     active_end_local = active_start_local + dt.timedelta(minutes=step_min)
-    current_label = f"{active_start_local.strftime('%H:%M')}-{active_end_local.strftime('%H:%M')}"
+    current_label = _label_from_range(active_start_local, active_end_local)
 
     # Fetch Amber bulk prices today + tomorrow
     today = now_local.date().strftime("%Y-%m-%d")
@@ -462,7 +513,7 @@ def main():
             try:
                 st_l = parse_iso_utc(row["startTime"]).astimezone(tz)
                 en_l = parse_iso_utc(row["endTime"]).astimezone(tz)
-                lbl = f"{st_l.strftime('%H:%M')}-{en_l.strftime('%H:%M')}"
+                lbl = _label_from_range(st_l, en_l)  # v24 normalize midnight
                 return st_l, en_l, lbl
             except Exception:
                 return None
@@ -495,8 +546,7 @@ def main():
 
             chosen = None
             if trip:
-                # If multiple rows share the same type rank, prefer the one whose START is
-                # closest to the active slot’s start.
+                # Prefer the same-type row whose START is closest to active slot start.
                 def _dist(row):
                     try:
                         st = parse_iso_utc(row["startTime"]).astimezone(tz)
@@ -515,12 +565,12 @@ def main():
                 if se:
                     st_l, en_l, lbl = se
                     if step_min == 30:
-                        # Enclosing 30-min slot label for the chosen 5-min interval
+                        # Enclosing 30-min slot label for the chosen 5-min interval (normalize midnight)
                         slot_start = floor_to_step(st_l, 30)
                         slot_end = slot_start + dt.timedelta(minutes=30)
-                        target_label = f"{slot_start.strftime('%H:%M')}-{slot_end.strftime('%H:%M')}"
+                        target_label = _label_from_range(slot_start, slot_end)
                     else:
-                        # step_min == 5 → the 5-min label itself
+                        # step_min == 5 → the 5-min label itself (normalized)
                         target_label = lbl
 
                     pending_override = (target_label, chosen_buy, chosen_sell)
@@ -529,9 +579,9 @@ def main():
                     labels, buy_vals, sell_vals = [], [], []
                     for r in trip:
                         try:
-                            st = parse_iso_utc(r["startTime"]).astimezone(tz).strftime("%H:%M")
-                            en = parse_iso_utc(r["endTime"]).astimezone(tz).strftime("%H:%M")
-                            lbl2 = f"{st}-{en}"
+                            st = parse_iso_utc(r["startTime"]).astimezone(tz)
+                            en = parse_iso_utc(r["endTime"]).astimezone(tz)
+                            lbl2 = _label_from_range(st, en)  # normalized
                         except Exception:
                             lbl2 = "<unknown>"
 
@@ -568,44 +618,73 @@ def main():
     buy_ranges = canonicalize_series_to_day(buy_ranges, step_min)
     sell_ranges = canonicalize_series_to_day(sell_ranges, step_min)
 
-    # ---- Apply pending override by exact label in the FINAL series ----
+    # ---- Apply pending override by label with normalization + index fallback (v24) ----
     if pending_override:
         target_label, chosen_buy, chosen_sell = pending_override
-        # BUY
-        idx = next((i for i, (tr, _) in enumerate(buy_ranges) if tr == target_label), None)
-        if idx is not None:
-            old = buy_ranges[idx][1]
-            if chosen_buy is None or chosen_buy == 0.0:
-                ZERO_EVENTS_BUY.append(f"current {target_label}")
-                print(f"[amber2sigen] Skipping BUY current override (zero/missing) for {target_label}; "
-                      f"keeping forecast {old}", file=sys.stderr)
-            else:
-                buy_ranges[idx] = (buy_ranges[idx][0], round(float(chosen_buy), 2))
-                print(f"[amber2sigen] BUY current override @ {target_label}: {old} → {buy_ranges[idx][1]}",
-                      file=sys.stderr)
-        else:
-            print(f"[amber2sigen] Could not locate BUY target label {target_label} in final series.", file=sys.stderr)
 
-        # SELL
-        idx = next((i for i, (tr, _) in enumerate(sell_ranges) if tr == target_label), None)
-        if idx is not None:
-            old = sell_ranges[idx][1]
-            if chosen_sell is None:
-                print(f"[amber2sigen] Skipping SELL current override (missing) for {target_label}; "
-                      f"keeping forecast {old}", file=sys.stderr)
+        # --- BUY ---
+        # Attempt exact match with normalization
+        buy_idx = next((i for i, (tr, _) in enumerate(buy_ranges)
+                        if _norm_label(tr) == _norm_label(target_label) or
+                           _norm_label(tr).split("-", 1)[0] == _norm_label(target_label).split("-", 1)[0]), None)
+        if buy_idx is None:
+            print(f"[amber2sigen] Could not locate BUY target label {target_label} in final series.", file=sys.stderr)
+            buy_idx = _half_hour_index_from_label(target_label) if step_min == 30 else None
+            if buy_idx is None or not (0 <= buy_idx < len(buy_ranges)):
+                print(f"[amber2sigen] FATAL: cannot compute index for BUY label {target_label}; no override applied.", file=sys.stderr)
             else:
-                sell_ranges[idx] = (sell_ranges[idx][0], round(float(chosen_sell), 2))
-                print(f"[amber2sigen] SELL current override @ {target_label}: {old} → {sell_ranges[idx][1]}",
-                      file=sys.stderr)
+                idx_label, idx_old = buy_ranges[buy_idx]
+                if chosen_buy is None or chosen_buy == 0.0:
+                    ZERO_EVENTS_BUY.append(f"current {idx_label}")
+                    print(f"[amber2sigen] Skipping BUY current override (zero/missing) for {idx_label}; keeping forecast {idx_old}", file=sys.stderr)
+                else:
+                    buy_new = round(float(chosen_buy), 2)
+                    buy_ranges[buy_idx] = (idx_label, buy_new)
+                    print(f"[amber2sigen] Overrode {idx_label} BUY: {idx_old:.2f} → {buy_new:.2f} (from 5-min CurrentInterval)", file=sys.stderr)
         else:
+            old = buy_ranges[buy_idx][1]
+            if chosen_buy is None or chosen_buy == 0.0:
+                ZERO_EVENTS_BUY.append(f"current {buy_ranges[buy_idx][0]}")
+                print(f"[amber2sigen] Skipping BUY current override (zero/missing) for {buy_ranges[buy_idx][0]}; keeping forecast {old}", file=sys.stderr)
+            else:
+                buy_new = round(float(chosen_buy), 2)
+                lbl = buy_ranges[buy_idx][0]
+                buy_ranges[buy_idx] = (lbl, buy_new)
+                print(f"[amber2sigen] Overrode {lbl} BUY: {old:.2f} → {buy_new:.2f} (from 5-min CurrentInterval)", file=sys.stderr)
+
+        # --- SELL ---
+        sell_idx = next((i for i, (tr, _) in enumerate(sell_ranges)
+                         if _norm_label(tr) == _norm_label(target_label) or
+                            _norm_label(tr).split("-", 1)[0] == _norm_label(target_label).split("-", 1)[0]), None)
+        if sell_idx is None:
             print(f"[amber2sigen] Could not locate SELL target label {target_label} in final series.", file=sys.stderr)
+            sell_idx = _half_hour_index_from_label(target_label) if step_min == 30 else None
+            if sell_idx is None or not (0 <= sell_idx < len(sell_ranges)):
+                print(f"[amber2sigen] FATAL: cannot compute index for SELL label {target_label}; no override applied.", file=sys.stderr)
+            else:
+                idx_label, idx_old = sell_ranges[sell_idx]
+                if chosen_sell is None:
+                    print(f"[amber2sigen] Skipping SELL current override (missing) for {idx_label}; keeping forecast {idx_old}", file=sys.stderr)
+                else:
+                    sell_new = round(float(chosen_sell), 2)
+                    sell_ranges[sell_idx] = (idx_label, sell_new)
+                    print(f"[amber2sigen] Overrode {idx_label} SELL: {idx_old:.2f} → {sell_new:.2f} (from 5-min CurrentInterval)", file=sys.stderr)
+        else:
+            old = sell_ranges[sell_idx][1]
+            if chosen_sell is None:
+                print(f"[amber2sigen] Skipping SELL current override (missing) for {sell_ranges[sell_idx][0]}; keeping forecast {old}", file=sys.stderr)
+            else:
+                sell_new = round(float(chosen_sell), 2)
+                lbl = sell_ranges[sell_idx][0]
+                sell_ranges[sell_idx] = (lbl, sell_new)
+                print(f"[amber2sigen] Overrode {lbl} SELL: {old:.2f} → {sell_new:.2f} (from 5-min CurrentInterval)", file=sys.stderr)
 
     # Postbuild zero scan (final series)
     for tr, p in buy_ranges:
         if p == 0.0:
             ZERO_EVENTS_BUY.append(f"postbuild {tr}")
 
-    # End-of-run diagnostics: active slot BUY/SELL in final series
+    # End-of-run diagnostics: active slot BUY/SELL in final series (normalized lookup)
     print(f"[amber2sigen] Active slot BUY {current_label} = "
           f"{_lookup_price_by_label(buy_ranges, current_label) or '<not found>'}", file=sys.stderr)
     print(f"[amber2sigen] Active slot SELL {current_label} = "
@@ -670,8 +749,12 @@ def main():
 
     headers = ensure_sigen_headers(args.sigen_user, args.device_id)
 
-    # Show what we will send
-    print(json.dumps(payload, indent=2))
+    # Show what we will send (controlled by PAYLOAD_DEBUG: 0=off, 1=on)
+    if os.environ.get("PAYLOAD_DEBUG", "1").strip() == "1":
+        print(json.dumps(payload, indent=2))
+    else:
+        print("[amber2sigen] PAYLOAD_DEBUG=0 → payload print suppressed.", file=sys.stderr)
+
 
     # Final safety: only skip POST if final BUY contains a 0.0 (unless override)
     final_has_zero = any(p == 0.0 for _, p in buy_ranges)
