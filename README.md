@@ -31,21 +31,80 @@ pip install -r requirements.txt
 
 ---
 
-## Step 1. Generate `.env` file
+## Step 1. Create user and directory
+
+For security, run this under a dedicated system user:
 
 ```bash
-python3 sigen_make_env.py   --user "your@email.com"   --password "your-plaintext-password"   --env-path amber2sigen.env   --overwrite
+sudo useradd --system --home /opt/amber2sigen --shell /usr/sbin/nologin amber2sigen
+sudo mkdir -p /opt/amber2sigen
+sudo chown amber2sigen:amber2sigen /opt/amber2sigen
 ```
 
-This creates `amber2sigen.env` with `SIGEN_PASS_ENC`. 
-
-Add your **Amber API token** manually.
-
-Add your **Sigen Station ID** manually.
+Clone or copy this repo into `/opt/amber2sigen`.
+Ensure the python script and run.sh files are also owned by amber2sigen:amber2sigen
 
 ---
 
-## Step 2. Example `.env`
+## Step 2. Generate `.env` file
+
+Run the helper to create your env file:
+
+```bash
+cd /opt/amber2sigen
+python3 sigen_make_env.py
+```
+
+You will be prompted for:
+- **Amber API token** (`AMBER_TOKEN`)
+- **Sigen username** (`SIGEN_USER`)
+- **Sigen encoded password** (`SIGEN_PASS_ENC`)
+- **Sigen device ID** (`SIGEN_DEVICE_ID`)
+
+Then move the generated env file to `/etc`:
+
+```bash
+sudo mv amber2sigen.env /etc/amber2sigen.env
+sudo chown root:root /etc/amber2sigen.env
+sudo chmod 600 /etc/amber2sigen.env
+```
+
+### How to find SIGEN_PASS_ENC and SIGEN_DEVICE_ID
+
+1. Open the Sigen web portal in your browser (https://app-aus.sigencloud.com/)  
+2. Open Developer Tools → **Network** tab.  
+3. Log in normally.  
+4. Look for a request to:  
+   ```
+   https://api-aus.sigencloud.com/auth/oauth/token
+   ```
+5. In the request payload you will see:
+   - `password` → this is the **encoded password** (copy into `SIGEN_PASS_ENC`).  
+   - `userDeviceId` → this is the **device ID** (copy into `SIGEN_DEVICE_ID`).  
+
+Copy these values exactly into the prompts.
+
+---
+
+## How to find your Sigen Station ID
+
+The `STATION_ID` is a unique numeric ID assigned to your Sigen Energy Controller by Sigen Cloud.  
+It must be included in the payload or Sigen won’t know which unit to update.
+
+Easiest way to find it:
+1. Ask SigenAI to "Tell me my StationID"
+
+Complex Ways to find it:
+1. **HAR capture**: In your browser, open the Sigen web portal, perform a tariff save, then export the HAR.  
+   Look for `"stationId": <your station ID>` in the JSON payload.  
+2. **App/device info**: Sometimes shown in the app under device details.  
+3. Once known, add it to your `.env` file as `STATION_ID=...`.
+
+This value is specific to your unit — not random or generated locally.
+
+---
+
+## Step 3. Example `/etc/amber2sigen.env`
 
 ```dotenv
 AMBER_TOKEN=psk_xxxxxxxxxxxxxxxxxxxx
@@ -65,40 +124,47 @@ STATION_ID=<Ask SigenAI for your Station ID>
 
 ---
 
-## Step 3. Run manually
+## Step 4. Run manually
 
 ```bash
-bash run.sh --dry-run
-bash run.sh
+cd /opt/amber2sigen
+sudo -u amber2sigen bash run.sh --dry-run
+sudo -u amber2sigen bash run.sh
 ```
 
 ---
 
-## Step 4. systemd
+## Step 5. systemd
 
 `/etc/systemd/system/amber2sigen.service`
 ```ini
 [Unit]
-Description=Update Sigen tariffs from Amber
+Description=Amber -> Sigen price sync
+Wants=network-online.target
 After=network-online.target
 
 [Service]
 Type=oneshot
-ExecStart=/usr/bin/env bash /home/youruser/amber2sig/run.sh
-WorkingDirectory=/home/youruser/amber2sig
 Environment=PYTHONUNBUFFERED=1
+EnvironmentFile=/etc/amber2sigen.env
+WorkingDirectory=/opt/amber2sigen
+ExecStart=/bin/bash /opt/amber2sigen/run.sh
+User=amber2sigen
+Group=amber2sigen
 ```
 
 `/etc/systemd/system/amber2sigen.timer`
 ```ini
 [Unit]
-Description=Run amber2sigen periodically
+Description=Run amber2sigen periodically at absolute 4-min marks +45s
+Wants=amber2sigen.service
 
 [Timer]
 OnBootSec=2min
-OnCalendar=*:0/5:45
-AccuracySec=1s
+OnCalendar=*:0/5:20
 Unit=amber2sigen.service
+Persistent=true
+AccuracySec=1s
 
 [Install]
 WantedBy=timers.target
@@ -126,24 +192,6 @@ sudo systemctl enable --now amber2sigen.timer
   ```bash
   systemctl list-timers | grep amber2sigen
   ```
-
----
-
-## How to find your Sigen Station ID
-
-The `STATION_ID` is a unique numeric ID assigned to your Sigen Energy Controller by Sigen Cloud.  
-It must be included in the payload or Sigen won’t know which unit to update.
-
-Easiest way to find it:
-1. Ask SigenAI to "Tell me my StationID"
-
-Complex Ways to find it:
-1. **HAR capture**: In your browser, open the Sigen web portal, perform a tariff save, then export the HAR.  
-   Look for `"stationId": <your station ID>` in the JSON payload.  
-2. **App/device info**: Sometimes shown in the app under device details.  
-3. Once known, add it to your `.env` file as `STATION_ID=...`.
-
-This value is specific to your unit — not random or generated locally.
 
 ---
 

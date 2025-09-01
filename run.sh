@@ -24,7 +24,7 @@ ARGS=(
   "--advanced-price" "${ADVANCED:-predicted}"
   "--sigen-user" "${SIGEN_USER}"
   "--sigen-pass-enc" "${SIGEN_PASS_ENC}"
-  "--sigen-device-id" "${SIGEN_DEVICE_ID}"
+  "--device-id" "${SIGEN_DEVICE_ID}"
 )
 
 [[ "${USE_CURRENT:-1}" == "1" ]] && ARGS+=("--use-current")
