@@ -191,7 +191,7 @@ sudo systemctl enable --now amber2sigen.timer
   systemctl list-timers | grep amber2sigen
   ```
 - Watch Timer:
-- ```bash
+```bash
 watch -n 10 "systemctl list-timers | grep amber2sigen"
 ```
 
