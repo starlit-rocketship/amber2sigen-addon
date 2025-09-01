@@ -3,7 +3,7 @@ set -euo pipefail
 cd "$(dirname "$0")"
 
 if [[ ! -f ./amber2sigen.env ]]; then
-  echo "[run.sh] Missing ./amber2sigen.env"; exit 1
+  echo "[run.sh] Missing /etc/amber2sigen.env"; exit 1
 fi
 source /etc/amber2sigen.env
 
