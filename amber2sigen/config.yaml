@@ -12,6 +12,7 @@ init: false
 startup: "application"
 image: "ghcr.io/starlit-rocketship/amber2sigen-addon-{arch}"
 logo: "logo.png"
+icon: "icon.png"
 
 
 # If you want to persist anything, /data is available by default (no map needed)
