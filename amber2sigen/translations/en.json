@@ -17,12 +17,12 @@
       "description": "Short-lived (~12h) token. Works immediately but expires; use pass_enc for stability."
     },
     "sigen_user": {
-      "name": "Sigen Email (optional)",
-      "description": "Only needed if you enable the experimental password-login helper."
+      "name": "Sigen Email",
+      "description": "Sigen App Account Email"
     },
     "sigen_password": {
-      "name": "Sigen Password (optional)",
-      "description": "Only used by the optional password-login helper."
+      "name": "Sigen Password",
+      "description": "Sigen App Account Password"
     },
     "interval": {
       "name": "Update Interval",

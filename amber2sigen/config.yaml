@@ -53,7 +53,7 @@ schema:
   sigen_user: "str"
   sigen_password: "password?"     # ← optional (not used unless we add login helper)
   sigen_device_id: "str?"
-  sigen_pass_enc: "str"
+  sigen_pass_enc: "password?"
   sigen_bearer: "str?"
   mqtt_enabled: "bool"
   mqtt_host: "str?"
