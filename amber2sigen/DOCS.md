@@ -1,11 +1,14 @@
-> **Current add-on version:** 1.0.2
-
 # Amber2Sigen (Home Assistant Add-on)
 
 Sync real-time Amber Electric import/export prices into your Sigen Energy Controller tariff plan, every 5–30 minutes, running as a Home Assistant add-on.
 
 **Upstream:** Based on [Talie5in/amber2sigen](https://github.com/Talie5in/amber2sigen) (we call the upstream script inside this add-on).  
 **Amber API:** Official; generate tokens in Amber’s web app under Developers.
+
+## !!!! WARNING !!!!
+
+- This project is experimental and it is likely to break. Especially if Sigen makes any changes to their web portal.
+- If you make energy buying/selling decisions based off this addon, you accept the responsibility that something could go wrong.
 
 ## Install (as a custom add-on repository)
 
