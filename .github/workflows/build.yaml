@@ -6,7 +6,7 @@ on:
   workflow_dispatch: {}
 
 permissions:
-  contents: read
+  contents: write         # <-- allow committing DOCS.md
   packages: write
 
 concurrency:
@@ -14,8 +14,24 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  docs:
+    runs-on: ubuntu-latest
+    # only commit on branch pushes (not tags)
+    if: github.event_name == 'push' && startsWith(github.ref, 'refs/heads/')
+    steps:
+      - uses: actions/checkout@v4
+      - name: Sync README to add-on DOCS.md
+        run: |
+          cp README.md amber2sigen/DOCS.md
+      - name: Commit DOCS.md
+        uses: stefanzweifel/git-auto-commit-action@v5
+        with:
+          commit_message: "docs: sync README -> amber2sigen/DOCS.md"
+          file_pattern: amber2sigen/DOCS.md
+
   build:
     runs-on: ubuntu-latest
+    needs: [docs]          # <-- wait for docs job
     permissions: { contents: read, packages: write }
     strategy:
       matrix:
@@ -33,26 +49,15 @@ jobs:
       IMAGE_NAME: ghcr.io/starlit-rocketship/amber2sigen-addon
       VERSION: 1.0.2
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Set up QEMU
-        uses: docker/setup-qemu-action@v3
-
-      - name: Sync README to add-on DOCS.md
-        run: |
-          cp README.md amber2sigen/DOCS.md
-
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-
+      - uses: actions/checkout@v4
+      - uses: docker/setup-qemu-action@v3
+      - uses: docker/setup-buildx-action@v3
       - name: Login to GHCR
         uses: docker/login-action@v3
         with:
           registry: ghcr.io
           username: starlit-rocketship
           password: ${{ secrets.GHCR_TOKEN }}
-
       - name: Build ${{ matrix.arch }} and push
         uses: docker/build-push-action@v6
         with:
@@ -68,22 +73,19 @@ jobs:
 
   manifest:
     runs-on: ubuntu-latest
-    needs: build
+    needs: [build]
     permissions: { contents: read, packages: write }
     env:
       IMAGE_NAME: ghcr.io/starlit-rocketship/amber2sigen-addon
       VERSION: 1.0.2
     steps:
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-
+      - uses: docker/setup-buildx-action@v3
       - name: Login to GHCR
         uses: docker/login-action@v3
         with:
           registry: ghcr.io
           username: starlit-rocketship
           password: ${{ secrets.GHCR_TOKEN }}
-
       - name: Create multi-arch tag (latest)
         run: |
           docker buildx imagetools create \
@@ -91,7 +93,6 @@ jobs:
             ${IMAGE_NAME}-amd64:latest \
             ${IMAGE_NAME}-aarch64:latest \
             ${IMAGE_NAME}-armv7:latest
-
       - name: Create multi-arch tag (version)
         run: |
           docker buildx imagetools create \
