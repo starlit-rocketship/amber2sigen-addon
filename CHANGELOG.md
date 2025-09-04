@@ -4,7 +4,7 @@
 
 ### Added
 
-- Small fix
+- Small fix for mqtt
 
 ## [1.0.2] - 2025-09-04
 
