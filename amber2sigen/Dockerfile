@@ -1,15 +1,13 @@
-# Overridden by CI's BUILD_FROM, but keep a sane default for local builds
+# Overridden by CI's BUILD_FROM; default keeps local builds sane
 ARG BUILD_FROM=ghcr.io/home-assistant/amd64-base:3.21
 FROM ${BUILD_FROM}
 
 ENV PYTHONDONTWRITEBYTECODE=1 \
-    PYTHONUNBUFFERED=1
+    PYTHONUNBUFFERED=1 \
+    # ensure our venv python/pip come first
+    PATH="/opt/venv/bin:${PATH}"
 
-# 1) Runtime deps + full build toolchain for Alpine
-#    - build-base: meta (gcc, g++, make, musl-dev)
-#    - python3-dev: headers for building C extensions
-#    - libffi-dev, openssl-dev, linux-headers: common native deps
-#    - cargo: rarely needed, but harmless if some transitive dep requires Rust
+# Runtime deps + full build toolchain for Alpine
 RUN apk add --no-cache \
     python3 py3-pip git \
     && apk add --no-cache --virtual .build-deps \
@@ -17,22 +15,23 @@ RUN apk add --no-cache \
 
 WORKDIR /opt/amber2sigen-addon
 
-# 2) Upgrade pip/setuptools/wheel so musllinux wheels are recognized when available
-RUN pip3 install --no-cache-dir --upgrade pip setuptools wheel
+# Create an isolated venv to avoid PEP 668 issues
+RUN python3 -m venv /opt/venv
 
-# 3) Install Python deps
+# Upgrade pip/setuptools/wheel IN THE VENV, then install deps there
 COPY requirements.txt .
-RUN pip3 install --no-cache-dir --prefer-binary -r requirements.txt
+RUN pip install --no-cache-dir --upgrade pip setuptools wheel \
+    && pip install --no-cache-dir --prefer-binary -r requirements.txt
 
-# 4) Pull upstream script (swap URL to your fork when you start modifying it)
+# Pull upstream (swap to your fork URL when you start modifying it)
 RUN git clone --depth=1 https://github.com/Talie5in/amber2sigen.git /opt/amber2sigen
 
-# 5) Add our wrapper and entrypoint
+# Add our wrapper and entrypoint
 COPY status_mqtt.py ha_wrapper.py ./
 COPY run.sh /run.sh
 RUN chmod +x /run.sh
 
-# 6) Remove build deps to slim the image
+# Remove build deps to slim the image
 RUN apk del .build-deps
 
 LABEL io.hass.name="Amber2Sigen" \
