@@ -1,5 +1,23 @@
 # Changelog
 
+## [1.0.2] - 2025-09-04
+
+### Added
+
+- Add in-UI documentation (DOCS.md synced from README).
+- Add configuration help text via translations.
+- Interval restricted to 5 or 30 minutes.
+
+### Fixed
+
+- Dockerfile: venv + Alpine toolchain only during build.
+- GHCR manifest creation via `buildx imagetools`.
+- README cleanup (removed stray citation markers).
+
+### Changed
+
+- Clone upstream from your fork by default (`starlit-rocketship/amber2sigen`).
+
 ## 1.0.0 — 2025-09-04
 
 - feat: initial Home Assistant add-on wrapper around Talie5in/amber2sigen
