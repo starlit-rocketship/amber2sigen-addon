@@ -17,7 +17,7 @@
       "description": "Plain password (optional). Not used unless we add an on-start login helper."
     },
     "sigen_pass_enc": {
-      "name": "Sigen Password (Encrypted)",
+      "name": "Sigen Password (Encrypted Blob)",
       "description": "Preferred: encrypted password blob for Sigen auth."
     },
     "sigen_bearer": {
@@ -30,7 +30,7 @@
     },
     "interval": {
       "name": "Update Interval (minutes)",
-      "description": "How often to sync. Sigen typically accepts 30. 5 is allowed but may be ignored."
+      "description": "Default 30 min (Sigen currently supports 30 min; 5-min is sent but may be ignored)"
     },
     "advanced": {
       "name": "Price Type",

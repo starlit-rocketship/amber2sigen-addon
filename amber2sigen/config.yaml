@@ -22,16 +22,17 @@ icon: "icon.png"
 options:
   amber_token: ""
   station_id: 0
-  interval: 30              # minutes; Sigen typically supports 30; 5 is allowed but may be ignored by Sigen
-  tz_override: ""
-  align: "end"              # "start"|"end" (passed to upstream if/when supported)
-  advanced: "predicted"     # "low"|"predicted"|"high"
+  interval: 30
+  tz_override: "Australia/Melbourne"
+  align: "end"
+  advanced: "predicted"
   use_current: true
   dry_run: false
   sigen_user: ""
+  sigen_password: ""         # NEW optional placeholder (not used yet)
   sigen_device_id: ""
-  sigen_pass_enc: ""        # preferred (encrypted blob)
-  sigen_bearer: ""          # alternative to user/enc; if set, will be used
+  sigen_pass_enc: ""
+  sigen_bearer: ""
   mqtt_enabled: false
   mqtt_host: "core-mosquitto"
   mqtt_port: 1883
@@ -42,13 +43,14 @@ options:
 schema:
   amber_token: "str"
   station_id: "int"
-  interval: "int(5,60)"
+  interval: "list(5|30)"     # ← ONLY 5 or 30 now
   tz_override: "str?"
   align: "list(start|end)?"
   advanced: "list(low|predicted|high)"
   use_current: "bool"
   dry_run: "bool"
   sigen_user: "str?"
+  sigen_password: "str?"     # ← optional (not used unless we add login helper)
   sigen_device_id: "str?"
   sigen_pass_enc: "str?"
   sigen_bearer: "str?"
