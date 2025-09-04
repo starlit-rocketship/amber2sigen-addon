@@ -1,10 +1,13 @@
 name: Build & Push Add-on Image
-
 on:
   push:
     branches: [ main ]
     tags: [ 'v*.*.*' ]
   workflow_dispatch: {}
+
+concurrency:
+  group: addon-${{ github.ref }}
+  cancel-in-progress: false
 
 jobs:
   build:
@@ -14,21 +17,33 @@ jobs:
       packages: write
     strategy:
       matrix:
-        arch: [ amd64, aarch64, armv7 ]
+        # matrix arch -> docker platform and HA base image arch
+        include:
+          - arch: amd64
+            platform: linux/amd64
+            base_arch: amd64
+          - arch: aarch64
+            platform: linux/arm64
+            base_arch: aarch64
+          - arch: armv7
+            platform: linux/arm/v7
+            base_arch: armv7
     env:
       IMAGE_NAME: ghcr.io/starlit-rocketship/amber2sigen-addon
       VERSION: 1.0.0
+
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout
+        uses: actions/checkout@v4
 
       - name: Set up QEMU
-      - uses: docker/setup-qemu-action@v3
+        uses: docker/setup-qemu-action@v3
 
       - name: Set up Docker Buildx
-      - uses: docker/setup-buildx-action@v3
+        uses: docker/setup-buildx-action@v3
 
       - name: Login to GHCR
-      - uses: docker/login-action@v3
+        uses: docker/login-action@v3
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
@@ -38,10 +53,11 @@ jobs:
         uses: docker/build-push-action@v6
         with:
           context: ./amber2sigen
-          platforms: linux/${{ matrix.arch }}
+          file: ./amber2sigen/Dockerfile
+          platforms: ${{ matrix.platform }}
           push: true
           build-args: |
-            BUILD_FROM=ghcr.io/home-assistant/${{ matrix.arch }}-base:2025.05.0
+            BUILD_FROM=ghcr.io/home-assistant/${{ matrix.base_arch }}-base:2025.05.0
           tags: |
             ${{ env.IMAGE_NAME }}-${{ matrix.arch }}:latest
             ${{ env.IMAGE_NAME }}-${{ matrix.arch }}:${{ env.VERSION }}
@@ -51,21 +67,32 @@ jobs:
     needs: build
     permissions:
       packages: write
+    env:
+      IMAGE_NAME: ghcr.io/starlit-rocketship/amber2sigen-addon
+      VERSION: 1.0.0
     steps:
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Login to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
       - name: Create and push multi-arch manifest (latest)
         run: |
-          docker manifest create ghcr.io/starlit-rocketship/amber2sigen-addon:latest \
-            --amend ghcr.io/starlit-rocketship/amber2sigen-addon-amd64:latest \
-            --amend ghcr.io/starlit-rocketship/amber2sigen-addon-aarch64:latest \
-            --amend ghcr.io/starlit-rocketship/amber2sigen-addon-armv7:latest
-          docker manifest push ghcr.io/starlit-rocketship/amber2sigen-addon:latest
+          docker manifest create ${IMAGE_NAME}:latest \
+            --amend ${IMAGE_NAME}-amd64:latest \
+            --amend ${IMAGE_NAME}-aarch64:latest \
+            --amend ${IMAGE_NAME}-armv7:latest
+          docker manifest push ${IMAGE_NAME}:latest
 
       - name: Create and push multi-arch manifest (version)
-        env:
-          VERSION: 1.0.0
         run: |
-          docker manifest create ghcr.io/starlit-rocketship/amber2sigen-addon:${VERSION} \
-            --amend ghcr.io/starlit-rocketship/amber2sigen-addon-amd64:${VERSION} \
-            --amend ghcr.io/starlit-rocketship/amber2sigen-addon-aarch64:${VERSION} \
-            --amend ghcr.io/starlit-rocketship/amber2sigen-addon-armv7:${VERSION}
-          docker manifest push ghcr.io/starlit-rocketship/amber2sigen-addon:${VERSION}
+          docker manifest create ${IMAGE_NAME}:${VERSION} \
+            --amend ${IMAGE_NAME}-amd64:${VERSION} \
+            --amend ${IMAGE_NAME}-aarch64:${VERSION} \
+            --amend ${IMAGE_NAME}-armv7:${VERSION}
+          docker manifest push ${IMAGE_NAME}:${VERSION}
