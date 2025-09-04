@@ -1,0 +1,80 @@
+{
+  "configuration": {
+    "amber_token": {
+      "name": "Amber API Token",
+      "description": "Get this from Amber → Settings → Developer."
+    },
+    "station_id": {
+      "name": "Sigen Station ID",
+      "description": "15-digit Station ID. In MySigen: ask Sigen AI Assistant \"What is my Station ID?\""
+    },
+    "sigen_user": {
+      "name": "Sigen Email",
+      "description": "Email address for your Sigen account (optional if you use a bearer or encrypted password)."
+    },
+    "sigen_password": {
+      "name": "Sigen Password",
+      "description": "Plain password (optional). Not used unless we add an on-start login helper."
+    },
+    "sigen_pass_enc": {
+      "name": "Sigen Password (Encrypted)",
+      "description": "Preferred: encrypted password blob for Sigen auth."
+    },
+    "sigen_bearer": {
+      "name": "Sigen Bearer Token",
+      "description": "Alternative to password: paste a valid token."
+    },
+    "sigen_device_id": {
+      "name": "Sigen Device ID (optional)",
+      "description": "Specific device to update. If empty, upstream default behavior applies."
+    },
+    "interval": {
+      "name": "Update Interval (minutes)",
+      "description": "How often to sync. Sigen typically accepts 30. 5 is allowed but may be ignored."
+    },
+    "advanced": {
+      "name": "Price Type",
+      "description": "Choose which Amber price band to use: low / predicted / high."
+    },
+    "use_current": {
+      "name": "Use Current Prices",
+      "description": "Include the current interval price in the plan."
+    },
+    "dry_run": {
+      "name": "Dry Run",
+      "description": "Fetch and compute but do not update the inverter."
+    },
+    "tz_override": {
+      "name": "Timezone Override",
+      "description": "E.g. Australia/Sydney. Leave blank to auto-detect."
+    },
+    "align": {
+      "name": "Price Alignment",
+      "description": "If supported by upstream: align to start or end of interval."
+    },
+    "mqtt_enabled": {
+      "name": "MQTT Status Sensor",
+      "description": "Publish running/valid/failed status via MQTT discovery."
+    },
+    "mqtt_host": {
+      "name": "MQTT Host",
+      "description": "Default: core-mosquitto"
+    },
+    "mqtt_port": {
+      "name": "MQTT Port",
+      "description": "Default: 1883"
+    },
+    "mqtt_username": {
+      "name": "MQTT Username",
+      "description": "Leave blank if your broker doesn't require it."
+    },
+    "mqtt_password": {
+      "name": "MQTT Password",
+      "description": "Leave blank if your broker doesn't require it."
+    },
+    "mqtt_topic_prefix": {
+      "name": "MQTT Topic Prefix",
+      "description": "Defaults to amber2sigen"
+    }
+  }
+}
