@@ -22,7 +22,7 @@ icon: "icon.png"
 
 options:
   amber_token: "psk_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"  # get from https://amber.com.au/dashboard/api-keys
-  station_id: 0
+  station_id: ""
   interval: 30
   tz_override: "Australia/Melbourne"
   align: "end"
@@ -50,8 +50,8 @@ schema:
   advanced: "list(low|predicted|high)"
   use_current: "bool"
   dry_run: "bool"
-  sigen_user: "str?"
-  sigen_password: "str?"     # ← optional (not used unless we add login helper)
+  sigen_user: "str"
+  sigen_password: "password"     # ← optional (not used unless we add login helper)
   sigen_device_id: "str?"
   sigen_pass_enc: "str?"
   sigen_bearer: "str?"

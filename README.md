@@ -13,7 +13,7 @@ Sync real-time Amber Electric import/export prices into your Sigen Energy Contro
 2. Add: `https://github.com/starlit-rocketship/amber2sigen-addon`
 3. Find **Amber2Sigen** and click **Install**.
 
-### How to find SIGEN_PASS_ENC and SIGEN_DEVICE_ID
+## How to find SIGEN_PASS_ENC and SIGEN_DEVICE_ID
 
 1. Open the Sigen web portal in your browser (https://app-aus.sigencloud.com/)
 2. Open Developer Tools → **Network** tab.
