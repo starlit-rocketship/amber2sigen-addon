@@ -1,3 +1,5 @@
+> **Current add-on version:** 1.0.2
+
 # Amber2Sigen (Home Assistant Add-on)
 
 Sync real-time Amber Electric import/export prices into your Sigen Energy Controller tariff plan, every 5–30 minutes, running as a Home Assistant add-on.
@@ -10,6 +12,19 @@ Sync real-time Amber Electric import/export prices into your Sigen Energy Contro
 1. In Home Assistant: _Settings → Add-ons → Add-on Store → … (3 dots) → Repositories_
 2. Add: `https://github.com/starlit-rocketship/amber2sigen-addon`
 3. Find **Amber2Sigen** and click **Install**.
+
+### How to find SIGEN_PASS_ENC and SIGEN_DEVICE_ID
+
+1. Open the Sigen web portal in your browser (https://app-aus.sigencloud.com/)
+2. Open Developer Tools → **Network** tab.
+3. Log in normally.
+4. Look for a request to:
+   ```
+   https://api-aus.sigencloud.com/auth/oauth/token
+   ```
+5. In the request payload you will see:
+   - `password` → this is the **encoded password** (copy into `SIGEN_PASS_ENC`).
+   - `userDeviceId` → this is the **device ID** (copy into `SIGEN_DEVICE_ID`).
 
 ## Configure
 

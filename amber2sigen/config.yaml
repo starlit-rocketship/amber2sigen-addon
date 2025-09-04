@@ -1,9 +1,10 @@
 # https://developers.home-assistant.io/docs/add-ons/configuration
 name: "Amber2Sigen"
-version: "1.0.1"
+version: "1.0.2"
 slug: "amber2sigen"
 description: "Sync Amber Electric prices to Sigen Energy Controller tariffs"
 url: "https://github.com/starlit-rocketship/amber2sigen-addon"
+documentation: "https://github.com/starlit-rocketship/amber2sigen-addon#readme"
 arch:
   - amd64
   - aarch64
@@ -20,7 +21,7 @@ icon: "icon.png"
 #   - share:rw
 
 options:
-  amber_token: ""
+  amber_token: "psk_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"  # get from https://amber.com.au/dashboard/api-keys
   station_id: 0
   interval: 30
   tz_override: "Australia/Melbourne"

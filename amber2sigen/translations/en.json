@@ -8,73 +8,41 @@
       "name": "Sigen Station ID",
       "description": "15-digit Station ID. In MySigen: ask Sigen AI Assistant \"What is my Station ID?\""
     },
-    "sigen_user": {
-      "name": "Sigen Email",
-      "description": "Email address for your Sigen account (optional if you use a bearer or encrypted password)."
-    },
-    "sigen_password": {
-      "name": "Sigen Password",
-      "description": "Plain password (optional). Not used unless we add an on-start login helper."
-    },
     "sigen_pass_enc": {
-      "name": "Sigen Password (Encrypted Blob)",
-      "description": "Preferred: encrypted password blob for Sigen auth."
+      "name": "Sigen Password (Encrypted)",
+      "description": "Preferred long-term auth. See Documentation for how to capture this value."
     },
     "sigen_bearer": {
       "name": "Sigen Bearer Token",
-      "description": "Alternative to password: paste a valid token."
+      "description": "Short-lived (~12h) token. Works immediately but expires; use pass_enc for stability."
     },
-    "sigen_device_id": {
-      "name": "Sigen Device ID (optional)",
-      "description": "Specific device to update. If empty, upstream default behavior applies."
+    "sigen_user": {
+      "name": "Sigen Email (optional)",
+      "description": "Only needed if you enable the experimental password-login helper."
+    },
+    "sigen_password": {
+      "name": "Sigen Password (optional)",
+      "description": "Only used by the optional password-login helper."
     },
     "interval": {
-      "name": "Update Interval (minutes)",
-      "description": "Default 30 min (Sigen currently supports 30 min; 5-min is sent but may be ignored)"
+      "name": "Update Interval",
+      "description": "Only 5 or 30 minutes are supported. Sigen app may ignore 5 min updates currently."
     },
     "advanced": {
       "name": "Price Type",
-      "description": "Choose which Amber price band to use: low / predicted / high."
+      "description": "Which Amber price band to use: low / predicted / high."
     },
     "use_current": {
       "name": "Use Current Prices",
-      "description": "Include the current interval price in the plan."
+      "description": "Include the current interval’s price in the plan."
     },
     "dry_run": {
       "name": "Dry Run",
-      "description": "Fetch and compute but do not update the inverter."
+      "description": "Fetch and compute but do not update Sigen."
     },
     "tz_override": {
       "name": "Timezone Override",
-      "description": "E.g. Australia/Sydney. Leave blank to auto-detect."
-    },
-    "align": {
-      "name": "Price Alignment",
-      "description": "If supported by upstream: align to start or end of interval."
-    },
-    "mqtt_enabled": {
-      "name": "MQTT Status Sensor",
-      "description": "Publish running/valid/failed status via MQTT discovery."
-    },
-    "mqtt_host": {
-      "name": "MQTT Host",
-      "description": "Default: core-mosquitto"
-    },
-    "mqtt_port": {
-      "name": "MQTT Port",
-      "description": "Default: 1883"
-    },
-    "mqtt_username": {
-      "name": "MQTT Username",
-      "description": "Leave blank if your broker doesn't require it."
-    },
-    "mqtt_password": {
-      "name": "MQTT Password",
-      "description": "Leave blank if your broker doesn't require it."
-    },
-    "mqtt_topic_prefix": {
-      "name": "MQTT Topic Prefix",
-      "description": "Defaults to amber2sigen"
+      "description": "E.g., Australia/Sydney. Leave blank to auto-detect."
     }
   }
 }
