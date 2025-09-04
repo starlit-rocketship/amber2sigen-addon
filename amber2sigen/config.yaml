@@ -1,0 +1,63 @@
+# https://developers.home-assistant.io/docs/add-ons/configuration
+name: "Amber2Sigen"
+version: "1.0.0"
+slug: "amber2sigen"
+description: "Sync Amber Electric prices to Sigen Energy Controller tariffs"
+url: "https://github.com/starlit-rocketship/amber2sigen-addon"
+arch:
+  - amd64
+  - aarch64
+  - armv7
+init: false
+startup: "application"
+image: "ghcr.io/starlit-rocketship/amber2sigen-addon-{arch}"
+logo: "logo.png"
+
+
+# If you want to persist anything, /data is available by default (no map needed)
+# map:
+#   - share:rw
+
+options:
+  amber_token: ""
+  station_id: 0
+  interval: 30              # minutes; Sigen typically supports 30; 5 is allowed but may be ignored by Sigen
+  tz_override: ""
+  align: "end"              # "start"|"end" (passed to upstream if/when supported)
+  advanced: "predicted"     # "low"|"predicted"|"high"
+  use_current: true
+  dry_run: false
+  sigen_user: ""
+  sigen_device_id: ""
+  sigen_pass_enc: ""        # preferred (encrypted blob)
+  sigen_bearer: ""          # alternative to user/enc; if set, will be used
+  mqtt_enabled: false
+  mqtt_host: "core-mosquitto"
+  mqtt_port: 1883
+  mqtt_username: ""
+  mqtt_password: ""
+  mqtt_topic_prefix: "amber2sigen"
+
+schema:
+  amber_token: "str"
+  station_id: "int"
+  interval: "int(5,60)"
+  tz_override: "str?"
+  align: "list(start|end)?"
+  advanced: "list(low|predicted|high)"
+  use_current: "bool"
+  dry_run: "bool"
+  sigen_user: "str?"
+  sigen_device_id: "str?"
+  sigen_pass_enc: "str?"
+  sigen_bearer: "str?"
+  mqtt_enabled: "bool"
+  mqtt_host: "str?"
+  mqtt_port: "int?"
+  mqtt_username: "str?"
+  mqtt_password: "str?"
+  mqtt_topic_prefix: "str?"
+
+# Optional watchdog - uncomment if you add a tiny HTTP health port:
+# watchdog:
+#   http: "http://[HOST]:[PORT:9998]/health"
