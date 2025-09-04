@@ -1,6 +1,6 @@
 # Home Assistant add-on base (S6 overlay, bashio ready).
 # We'll pass BUILD_FROM from the HA builder or our GitHub Actions.
-ARG BUILD_FROM=ghcr.io/home-assistant/amd64-base:2025.05.0
+ARG BUILD_FROM=ghcr.io/home-assistant/amd64-base:3.21
 FROM ${BUILD_FROM}
 
 # Make Python happy
