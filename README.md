@@ -3,7 +3,7 @@
 Sync real-time Amber Electric import/export prices into your Sigen Energy Controller tariff plan, every 5–30 minutes, running as a Home Assistant add-on.
 
 **Upstream:** Based on [Talie5in/amber2sigen](https://github.com/Talie5in/amber2sigen) (we call the upstream script inside this add-on).  
-**Amber API:** Official; generate tokens in Amber’s web app under Developers. :contentReference[oaicite:11]{index=11}
+**Amber API:** Official; generate tokens in Amber’s web app under Developers.
 
 ## Install (as a custom add-on repository)
 
@@ -21,7 +21,7 @@ Sync real-time Amber Electric import/export prices into your Sigen Energy Contro
 - **Use current**: Fill the first slot from Amber `/prices/current` (matches upstream defaults).
 - **MQTT (optional)**: Enable to publish a status sensor.
 
-> The add-on reads options from `/data/options.json` (standard for HA add-ons). :contentReference[oaicite:12]{index=12}
+> The add-on reads options from `/data/options.json` (standard for HA add-ons).
 
 ## What it does
 
@@ -48,8 +48,8 @@ States: `running`, `valid` (success), `failed`.
 
 - **No add-on options?** Ensure you saved the configuration—HA writes to `/data/options.json`.
 - **Station ID?** Ask Sigen AI for your Station ID or check browser dev tools for API payloads.
-- **Amber token?** See Amber’s “Do you have an API?” page → Developers → Generate token. :contentReference[oaicite:13]{index=13}
-- **Intervals**: Upstream supports 5 or 30; Sigen typically accepts 30-minute plans currently. :contentReference[oaicite:14]{index=14}
+- **Amber token?** See Amber’s “Do you have an API?” page → Developers → Generate token.
+- **Intervals**: Upstream supports 5 or 30; Sigen typically accepts 30-minute plans currently.
 
 ## Differences vs upstream
 
