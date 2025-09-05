@@ -1,6 +1,6 @@
 # https://developers.home-assistant.io/docs/add-ons/configuration
 name: "Amber2Sigen"
-version: "1.0.4"
+version: "1.0.5"
 slug: "amber2sigen"
 description: "Sync Amber Electric prices to Sigen Energy Controller tariffs"
 url: "https://github.com/starlit-rocketship/amber2sigen-addon"
@@ -14,6 +14,8 @@ startup: "application"
 image: "ghcr.io/starlit-rocketship/amber2sigen-addon-{arch}"
 logo: "logo.png"
 icon: "icon.png"
+homeassistant_api: true
+
 
 
 # If you want to persist anything, /data is available by default (no map needed)
@@ -21,7 +23,10 @@ icon: "icon.png"
 #   - share:rw
 
 options:
-  amber_token: "psk_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"  # get from https://amber.com.au/dashboard/api-keys
+  amber_token: "psk_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+  use_ha_entities: false
+  ha_import_entity: "sensor.amber_general_forecast"
+  ha_export_entity: "sensor.amber_feed_in_forecast"  # get from https://amber.com.au/dashboard/api-keys
   station_id: ""
   interval: 30
   tz_override: "Australia/Melbourne"
@@ -43,6 +48,9 @@ options:
 
 schema:
   amber_token: "str"
+  use_ha_entities: "bool"
+  ha_import_entity: "str?"
+  ha_export_entity: "str?"
   station_id: "int"
   interval: "list(5|30)"     # ← ONLY 5 or 30 now
   tz_override: "str?"
@@ -59,7 +67,7 @@ schema:
   mqtt_host: "str?"
   mqtt_port: "int?"
   mqtt_username: "str?"
-  mqtt_password: "str?"
+  mqtt_password: "str"
   mqtt_topic_prefix: "str?"
 
 # Optional watchdog - uncomment if you add a tiny HTTP health port:

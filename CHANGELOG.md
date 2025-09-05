@@ -1,5 +1,17 @@
 # Changelog
 
+## [1.0.5] - 2025-09-05
+
+### Added
+
+- Ability to read prices from Amber Electric HA sensors directly instead of API
+
+## [1.0.4] - 2025-09-04
+
+### Added
+
+- Small fix for password fields
+
 ## [1.0.3] - 2025-09-04
 
 ### Added

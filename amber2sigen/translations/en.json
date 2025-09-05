@@ -4,12 +4,24 @@
       "name": "Amber API Token",
       "description": "Get this from Amber → Settings → Developer."
     },
+    "use_ha_entities": {
+      "name": "Use HA Entities (no Amber API)",
+      "description": "If enabled, ignore Amber API token and read forecasts from Home Assistant entities."
+    },
+    "ha_import_entity": {
+      "name": "Import (BUY) Entity",
+      "description": "e.g., sensor.amber_general_forecast (uses attributes.forecasts[].per_kwh)"
+    },
+    "ha_export_entity": {
+      "name": "Export (SELL) Entity",
+      "description": "Optional (e.g., sensor.amber_feed_in_forecast). Falls back to import entity's spot_per_kwh if blank."
+    },
     "station_id": {
       "name": "Sigen Station ID",
       "description": "15-digit Station ID. In MySigen: ask Sigen AI Assistant \"What is my Station ID?\""
     },
     "sigen_pass_enc": {
-      "name": "Sigen Password (Encrypted)",
+      "name": "Sigen Password (Encrypted Blob)",
       "description": "Preferred long-term auth. See Documentation for how to capture this value."
     },
     "sigen_bearer": {
