@@ -11,24 +11,19 @@ redact() {
   echo "****"
 }
 
+null_to_empty() { local v="$1"; [[ "${!v:-}" == "null" ]] && printf -v "$v" ""; }
+
 publish_status() {
   local state="$1"   # running|valid|failed
   local message="$2" # free text
 
-  if bashio::config.true 'mqtt.enabled'; then
-    local host port user pass prefix
-    host="$(bashio::config 'mqtt.host' || echo 'localhost')"
-    port="$(bashio::config 'mqtt.port' || echo '1883')"
-    user="$(bashio::config 'mqtt.username' || true)"
-    pass="$(bashio::config 'mqtt.password' || true)"
-    prefix="$(bashio::config 'mqtt.prefix' || echo 'amber2sigen/status')"
-
+  if [[ "${MQTT_ENABLED}" == "true" ]]; then
     python3 /opt/amber2sigen/status_mqtt.py \
-      --host "${host}" \
-      --port "${port}" \
-      ${user:+--username "${user}"} \
-      ${pass:+--password "${pass}"} \
-      --prefix "${prefix}" \
+      --host "${MQTT_HOST}" \
+      --port "${MQTT_PORT:-1883}" \
+      ${MQTT_USERNAME:+--username "${MQTT_USERNAME}"} \
+      ${MQTT_PASSWORD:+--password "${MQTT_PASSWORD}"} \
+      --prefix "${MQTT_PREFIX}" \
       --state "${state}" \
       --attr "station_id=${STATION_ID}" \
       --attr "device_id_present=$([[ -n "${SIGEN_DEVICE_ID:-}" ]] && echo true || echo false)" \
@@ -50,41 +45,49 @@ STATION_ID="$(bashio::config 'station_id' || true)"
 INTERVAL="$(bashio::config 'interval' || echo '30')"
 
 if [[ -z "${AMBER_TOKEN:-}" ]]; then
-  bashio::log.error "Amber token is required (amber_token)."
-  exit 1
+  bashio::log.error "Amber token is required (amber_token)."; exit 1
 fi
 if [[ -z "${STATION_ID:-}" ]]; then
-  bashio::log.error "Sigen station ID is required (station_id)."
-  exit 1
+  bashio::log.error "Sigen station ID is required (station_id)."; exit 1
 fi
 if [[ "${INTERVAL}" != "5" && "${INTERVAL}" != "30" ]]; then
   bashio::log.warning "interval=${INTERVAL} not in {5,30}; defaulting to 30."
   INTERVAL="30"
 fi
 
-# ---------- optional config ----------
+# ---------- optional config (read directly, then normalize "null") ----------
 SIGEN_DEVICE_ID="$(bashio::config 'sigen_device_id' || true)"
 SIGEN_USER="$(bashio::config 'sigen_user' || true)"
 SIGEN_PASS_ENC="$(bashio::config 'sigen_pass_enc' || true)"
 SIGEN_BEARER="$(bashio::config 'sigen_bearer' || true)"
 
-ADVANCED_PRICE=""
-bashio::config.has 'advanced_price' && ADVANCED_PRICE="$(bashio::config 'advanced_price')"
+ADVANCED_PRICE="$(bashio::config 'advanced_price' || true)"
+ALIGN="$(bashio::config 'align' || true)"
+PLAN_NAME="$(bashio::config 'plan_name' || true)"
 
-ALIGN=""
-bashio::config.has 'align' && ALIGN="$(bashio::config 'align')"
+USE_CURRENT="$(bashio::config 'use_current' || echo 'false')"
+DRY_RUN="$(bashio::config 'dry_run' || echo 'false')"
 
-PLAN_NAME=""
-bashio::config.has 'plan_name' && PLAN_NAME="$(bashio::config 'plan_name')"
+TZ_OVERRIDE="$(bashio::config 'tz_override' || true)"
 
-USE_CURRENT=false
-bashio::config.true 'use_current' && USE_CURRENT=true
+MQTT_ENABLED="$(bashio::config 'mqtt.enabled' || echo 'false')"
+MQTT_HOST="$(bashio::config 'mqtt.host' || true)"
+MQTT_PORT="$(bashio::config 'mqtt.port' || echo '1883')"
+MQTT_USERNAME="$(bashio::config 'mqtt.username' || true)"
+MQTT_PASSWORD="$(bashio::config 'mqtt.password' || true)"
+MQTT_PREFIX="$(bashio::config 'mqtt.prefix' || echo 'amber2sigen/status')"
 
-DRY_RUN=false
-bashio::config.true 'dry_run' && DRY_RUN=true
+# normalize "null" to empty/false
+for key in ADVANCED_PRICE ALIGN PLAN_NAME TZ_OVERRIDE MQTT_HOST MQTT_PORT MQTT_USERNAME MQTT_PASSWORD MQTT_PREFIX SIGEN_DEVICE_ID SIGEN_USER SIGEN_PASS_ENC SIGEN_BEARER; do
+  null_to_empty "$key"
+done
+[[ "${MQTT_ENABLED}" == "null" ]] && MQTT_ENABLED="false"
+[[ "${USE_CURRENT}"  == "null" ]] && USE_CURRENT="false"
+[[ "${DRY_RUN}"      == "null" ]] && DRY_RUN="false"
 
-if bashio::config.has 'tz_override'; then
-  export TZ="$(bashio::config 'tz_override')"
+# ---------- TZ override ----------
+if [[ -n "${TZ_OVERRIDE:-}" ]]; then
+  export TZ="${TZ_OVERRIDE}"
   bashio::log.info "Timezone override active: TZ=${TZ}"
 fi
 
@@ -112,25 +115,25 @@ bashio::log.info "SIGEN_DEVICE_ID=$(redact "${SIGEN_DEVICE_ID}")"
 mode_str="${ADVANCED_PRICE:-<default>}"
 align_str="${ALIGN:-<none>}"
 plan_str="${PLAN_NAME:-<none>}"
-mqtt_str=$([[ "$(bashio::config 'mqtt.enabled' || echo false)" == "true" ]] && echo "enabled" || echo "disabled")
+mqtt_str=$([[ "${MQTT_ENABLED}" == "true" ]] && echo "enabled" || echo "disabled")
 bashio::log.info "Starting Amber2Sigen Add-on"
 bashio::log.info "interval=${INTERVAL}m mode=${mode_str} align=${align_str} plan=\"${plan_str}\" auth=${AUTH_MODE} mqtt=${mqtt_str}"
+
+# (Optional) debug certain read-back values (comment out after verifying)
+# bashio::log.info "DEBUG: options snapshot: $(jq -c '{advanced_price:.advanced_price,align:.align,plan_name:.plan_name,mqtt:.mqtt}' /data/options.json)"
 
 # ---------- main loop ----------
 while true; do
   publish_status "running" "cycle start"
 
-  # Build CLI args for upstream
   CLI_ARGS=( "--station-id" "${STATION_ID}" "--interval" "${INTERVAL}" )
-
   [[ -n "${ADVANCED_PRICE}" ]] && CLI_ARGS+=( "--advanced-price" "${ADVANCED_PRICE}" )
-  $USE_CURRENT && CLI_ARGS+=( "--use-current" )
-  $DRY_RUN && CLI_ARGS+=( "--dry-run" )
+  [[ "${USE_CURRENT}" == "true" ]] && CLI_ARGS+=( "--use-current" )
+  [[ "${DRY_RUN}" == "true" ]] && CLI_ARGS+=( "--dry-run" )
   [[ -n "${ALIGN}" ]] && CLI_ARGS+=( "--align" "${ALIGN}" )
   [[ -n "${PLAN_NAME}" ]] && CLI_ARGS+=( "--plan-name" "${PLAN_NAME}" )
   [[ -n "${SIGEN_DEVICE_ID}" ]] && CLI_ARGS+=( "--device-id" "${SIGEN_DEVICE_ID}" )
 
-  # Export env used by upstream (don’t echo)
   export AMBER_TOKEN SIGEN_USER SIGEN_PASS_ENC SIGEN_BEARER SIGEN_DEVICE_ID
 
   bashio::log.info "Executing amber_to_sigen.py with args: ${CLI_ARGS[*]}"
