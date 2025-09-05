@@ -13,6 +13,7 @@ concurrency:
   group: addon-${{ github.ref }}
   cancel-in-progress: false
 
+
 jobs:
   docs:
     runs-on: ubuntu-latest
