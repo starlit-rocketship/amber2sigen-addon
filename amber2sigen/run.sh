@@ -13,6 +13,7 @@ ALIGN="$(bashio::config 'align')"                  # start|end (optional passthr
 ADVANCED="$(bashio::config 'advanced')"            # low|predicted|high
 USE_CURRENT="$(bashio::config 'use_current')"
 DRY_RUN="$(bashio::config 'dry_run')"
+PLAN_NAME="$(bashio::config 'plan_name')"          # optional plan name override
 
 SIGEN_USER="$(bashio::config 'sigen_user')"
 SIGEN_PASSWORD="$(bashio::config 'sigen_password')"  # currently not used to derive bearer
@@ -26,9 +27,6 @@ MQTT_PORT="$(bashio::config 'mqtt_port')"
 MQTT_USERNAME="$(bashio::config 'mqtt_username')"
 MQTT_PASSWORD_MQTT="$(bashio::config 'mqtt_password')"
 MQTT_TOPIC_PREFIX="$(bashio::config 'mqtt_topic_prefix')"
-
-# NEW: optional plan name (passed to upstream as --plan-name)
-PLAN_NAME="$(bashio::config 'plan_name')"
 
 # ---- Basic validation ----
 if [[ -z "${AMBER_TOKEN}" ]]; then
@@ -90,12 +88,13 @@ BASE_FLAGS=( "--station-id" "${STATION_ID}" "--interval" "${INTERVAL}" "--advanc
 # Optional:
 [[ "${USE_CURRENT}" == "true" ]] && BASE_FLAGS+=( "--use-current" )
 [[ "${DRY_RUN}" == "true" ]] && BASE_FLAGS+=( "--dry-run" )
-# ALIGN is passed only if set and non-empty
+# ALIGN is passed only if set and non-empty (upstream may ignore if unsupported)
 if [[ -n "${ALIGN}" && "${ALIGN}" != "null" ]]; then
   BASE_FLAGS+=( "--align" "${ALIGN}" )
 fi
-# NEW: pass plan name only if set and non-null
+# PLAN_NAME is passed only if set and non-empty
 if [[ -n "${PLAN_NAME}" && "${PLAN_NAME}" != "null" ]]; then
+  bashio::log.info "Using plan name: ${PLAN_NAME}"
   BASE_FLAGS+=( "--plan-name" "${PLAN_NAME}" )
 fi
 

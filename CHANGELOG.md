@@ -1,5 +1,15 @@
 # Changelog
 
+## [1.0.20] - $(date +%Y-%m-%d)
+
+### Added
+- Support for `--plan-name` option to override plan name for tariff updates
+- New `plan_name` configuration field in Home Assistant UI
+
+### Changed
+- Enhanced CLI flag building to support optional plan name parameter
+
+
 ## [1.0.3] - 2025-09-04
 
 ### Added
