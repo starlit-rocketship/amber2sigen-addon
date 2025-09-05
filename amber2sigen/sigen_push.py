@@ -6,25 +6,20 @@ Usage:
   sigen_push.py --station-id 1020... --plan-json /tmp/ha_plan.json [--sigen-bearer ...] [--sigen-pass-enc ...] [--sigen-url ...]
 Auth priority:
   1) --sigen-bearer (or env SIGEN_BEARER)
-  2) --sigen-pass-enc (or env SIGEN_PASS_ENC) → exchanged to a bearer
+  2) --sigen-pass-enc (or env SIGEN_PASS_ENC) -> exchanged for a bearer
 """
 
 import argparse, json, os, sys, time
 import requests
 
 DEFAULT_BASE = os.environ.get("SIGEN_URL", "https://app.sigenenergy.com")
-
-# These two endpoints names match what the upstream typically uses:
-# - one to exchange pass_enc → bearer (if you supply pass_enc)
-# - one to set the tariff plan
-AUTH_PATH = "/app/api/account/passEncLogin"     # may differ on some regions
-PLAN_PATH = "/app/api/station/price/set"        # final POST for price plan
+AUTH_PATH = "/app/api/account/passEncLogin"   # may vary by region; adjust if needed
+PLAN_PATH = "/app/api/station/price/set"      # POST price plan
 
 def log(msg): print(time.strftime("%Y-%m-%d %H:%M:%S"), msg, flush=True)
 
 def get_bearer_from_passenc(base, pass_enc):
     url = base + AUTH_PATH
-    # Minimal payload; the upstream includes device/app metadata, but pass_enc is the key.
     payload = {"passEnc": pass_enc}
     r = requests.post(url, json=payload, timeout=15)
     r.raise_for_status()
@@ -39,13 +34,8 @@ def get_bearer_from_passenc(base, pass_enc):
 def push_plan(base, station_id, bearer, plan_json):
     url = base + PLAN_PATH
     headers = {"Authorization": f"Bearer {bearer}"}
-    payload = {
-        "stationId": int(station_id),
-        "priceMode": 1,
-        **plan_json,  # contains buyPrice/sellPrice staticPricing blocks
-    }
+    payload = {"stationId": int(station_id), "priceMode": 1, **plan_json}
     r = requests.post(url, json=payload, headers=headers, timeout=20)
-    # Sigen API usually returns {"code":0,"msg":"success","data":true}
     try:
         data = r.json()
     except Exception:
