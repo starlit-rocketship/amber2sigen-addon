@@ -1,6 +1,6 @@
 # https://developers.home-assistant.io/docs/add-ons/configuration
 name: "Amber2Sigen"
-version: "1.0.20"
+version: "1.0.21"
 slug: "amber2sigen"
 description: "Sync Amber Electric prices to Sigen Energy Controller tariffs"
 url: "https://github.com/starlit-rocketship/amber2sigen-addon"
@@ -52,10 +52,7 @@ schema:
   sigen_device_id: "str?"
   sigen_pass_enc: "password?"
   sigen_bearer: "str?"
-  plan_name:
-    type: str
-    required: false
-    default: "Amber TOU"
+  plan_name: "str?"
   align: "list(start|end)?"
   advanced: "list(low|predicted|high)"
   use_current: "bool"

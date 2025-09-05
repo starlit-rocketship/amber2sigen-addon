@@ -1,5 +1,16 @@
 # Changelog
 
+## [1.0.21] - $(date +%Y-%m-%d)
+
+### Fixed
+- Fixed schema format issues for Home Assistant add-on store compatibility
+- Corrected repository configuration to ensure proper add-on discovery
+
+### Added
+- Support for `--plan-name` option to override plan name for tariff updates
+- New `plan_name` configuration field in Home Assistant UI
+
+
 ## [1.0.20] - $(date +%Y-%m-%d)
 
 ### Added
