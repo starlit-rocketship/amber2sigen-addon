@@ -52,7 +52,7 @@ schema:
   sigen_device_id: "str?"
   sigen_pass_enc: "password?"
   sigen_bearer: "str?"
-  plan_name: "str"
+  plan_name: "str(1, 64)?"
   align: "list(start|end)?"
   advanced: "list(low|predicted|high)"
   use_current: "bool"
