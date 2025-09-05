@@ -32,7 +32,7 @@ RUN git clone --depth=1 ${UPSTREAM_REPO} /opt/amber2sigen \
     fi
 
 # --- Add wrapper + entrypoint ---
-COPY status_mqtt.py ha_wrapper.py ha_entities_source.py ./
+COPY status_mqtt.py ha_entities_source.py sigen_push.py ./
 COPY run.sh /run.sh
 RUN chmod +x /run.sh
 
