@@ -1,6 +1,6 @@
 # https://developers.home-assistant.io/docs/add-ons/configuration
 name: "Amber2Sigen"
-version: "1.0.5"
+version: "1.0.6"
 slug: "amber2sigen"
 description: "Sync Amber Electric prices to Sigen Energy Controller tariffs"
 url: "https://github.com/starlit-rocketship/amber2sigen-addon"
@@ -25,15 +25,16 @@ options:
   station_id: ""
   interval: 30
   tz_override: "Australia/Melbourne"
-  align: "end"
-  advanced: "predicted"
-  use_current: true
-  dry_run: false
   sigen_user: ""
   sigen_password: ""         # NEW optional placeholder (not used yet)
   sigen_device_id: ""
   sigen_pass_enc: ""
   sigen_bearer: ""
+  plan_name: "Amber Live"
+  align: "end"
+  advanced: "predicted"
+  use_current: true
+  dry_run: false
   mqtt_enabled: false
   mqtt_host: "core-mosquitto"
   mqtt_port: 1883
@@ -46,15 +47,16 @@ schema:
   station_id: "int"
   interval: "list(5|30)"     # ← ONLY 5 or 30 now
   tz_override: "str?"
-  align: "list(start|end)?"
-  advanced: "list(low|predicted|high)"
-  use_current: "bool"
-  dry_run: "bool"
   sigen_user: "str"
   sigen_password: "password?"     # ← optional (not used unless we add login helper)
   sigen_device_id: "str?"
   sigen_pass_enc: "password?"
   sigen_bearer: "str?"
+  plan_name: "str"
+  align: "list(start|end)?"
+  advanced: "list(low|predicted|high)"
+  use_current: "bool"
+  dry_run: "bool"
   mqtt_enabled: "bool"
   mqtt_host: "str?"
   mqtt_port: "int?"
