@@ -1,46 +1,59 @@
-# Overridden per-arch by your workflow's BUILD_FROM (e.g. amd64-base:3.21 / aarch64-base:3.21 / armv7-base:3.21)
-ARG BUILD_FROM=ghcr.io/home-assistant/amd64-base:3.21
+# ========== Base image comes from CI matrix ==========
+ARG BUILD_FROM
 FROM ${BUILD_FROM}
 
-# Prefer venv python/pip and keep Python I/O unbuffered
-ENV PYTHONDONTWRITEBYTECODE=1 \
-    PYTHONUNBUFFERED=1 \
+# ---------- Build args (cache-busting & upstream selection) ----------
+ARG ADDON_VERSION=1.0.9
+ARG UPSTREAM_REPO="https://github.com/starlit-rocketship/amber2sigen.git"
+ARG UPSTREAM_REF=""  # set to a commit or tag to pin (optional)
+
+# ---------- Environment ----------
+ENV PYTHONUNBUFFERED=1 \
+    PYTHONDONTWRITEBYTECODE=1 \
     PATH="/opt/venv/bin:${PATH}"
 
-# --- System deps ---
-# - python3/py3-pip/git: runtime + fetch upstream
-# - .build-deps: toolchain for compiling wheels on Alpine (removed later)
-RUN apk add --no-cache \
-    python3 py3-pip git \
-    && apk add --no-cache --virtual .build-deps \
-    build-base python3-dev libffi-dev openssl-dev linux-headers
+# Alpine shell with pipefail
+SHELL ["/bin/ash", "-o", "pipefail", "-c"]
 
+# ---------- System deps ----------
+# python3, pip, git for runtime; build toolchain only for wheels compilation (pycryptodome, etc.)
+RUN apk add --no-cache \
+    python3 py3-pip git && \
+    apk add --no-cache --virtual .build-deps \
+    build-base python3-dev libffi-dev openssl-dev linux-headers cargo
+
+# ---------- Workdir ----------
 WORKDIR /opt/amber2sigen-addon
 
-# --- Python deps in isolated venv (avoids PEP 668) ---
-RUN python3 -m venv /opt/venv
-COPY requirements.txt .
-RUN pip install --no-cache-dir --upgrade pip setuptools wheel \
-    && pip install --no-cache-dir --prefer-binary -r requirements.txt
+# ---------- Python deps ----------
+# Keep requirements in the layer cache & install into an isolated venv (PEP 668 safe)
+COPY requirements.txt ./
+RUN python3 -m venv /opt/venv && \
+    /opt/venv/bin/pip install --no-cache-dir --upgrade pip setuptools wheel && \
+    /opt/venv/bin/pip install --no-cache-dir --prefer-binary -r requirements.txt
 
-# --- Pull upstream (your fork by default; optionally pin a commit/tag) ---
-ARG UPSTREAM_REPO=https://github.com/starlit-rocketship/amber2sigen.git
-ARG UPSTREAM_REF=""
-RUN git clone --depth=1 ${UPSTREAM_REPO} /opt/amber2sigen \
-    && if [ -n "${UPSTREAM_REF}" ]; then \
-    cd /opt/amber2sigen && git fetch --depth=1 origin ${UPSTREAM_REF} && git checkout ${UPSTREAM_REF}; \
+# ---------- Upstream script (your fork by default) ----------
+# You can pin a specific ref (tag/commit) by setting UPSTREAM_REF in CI or locally.
+RUN git clone --depth=1 "${UPSTREAM_REPO}" /opt/amber2sigen && \
+    if [ -n "${UPSTREAM_REF}" ]; then \
+    cd /opt/amber2sigen && \
+    git fetch --depth=1 origin "${UPSTREAM_REF}" && \
+    git checkout "${UPSTREAM_REF}"; \
     fi
 
-# --- Add wrapper + entrypoint ---
-COPY status_mqtt.py ha_entities_source.py sigen_push.py ha_wrapper.py ./
-COPY run.sh /run.sh
+# ---------- Add-on helpers ----------
+# Copy ONLY files that exist in your repo under amber2sigen/
+# (If you don't have ha_wrapper.py, do not list it here.)
+COPY status_mqtt.py ha_entities_source.py sigen_push.py run.sh ./
+
+# Ensure entrypoint is executable
 RUN chmod +x /run.sh
 
-# --- Slim image ---
+# ---------- Clean up build deps ----------
 RUN apk del .build-deps
 
-LABEL io.hass.name="Amber2Sigen" \
-    io.hass.version="1.0.1" \
-    io.hass.type="addon"
+# ---------- (Optional) quick debug of final contents (comment out after first success) ----------
+# RUN echo "DEBUG: /opt/amber2sigen-addon contains:" && ls -la /opt/amber2sigen-addon
 
+# ---------- Entrypoint ----------
 CMD ["/run.sh"]
